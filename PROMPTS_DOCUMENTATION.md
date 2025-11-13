@@ -953,3 +953,280 @@ Shows files and subdirectories in tree structure for exploring project organizat
 
 ---
 
+
+## Search Tools
+
+### Glob Tool
+
+**Purpose**: Fast file pattern matching tool that finds files by name/pattern, returning paths sorted by modification time.
+
+**Location**: `/home/user/crush/internal/agent/tools/glob.md`
+
+**Key Features**:
+- Pattern matching with `*`, `**`, `?`, `[...]` syntax
+- Returns newest files first (sorted by modification time)
+- Results limited to 100 files
+- Hidden files skipped (starting with '.')
+- Cross-platform path handling
+
+**Example Patterns**: `*.js`, `**/*.ts`, `src/**/*.{ts,tsx}`, `*.{html,css,js}`
+
+---
+
+### Grep Tool
+
+**Purpose**: Fast content search tool that finds files containing specific text/patterns using regex.
+
+**Location**: `/home/user/crush/internal/agent/tools/grep.md`
+
+**Key Features**:
+- Regex pattern search within file contents
+- literal_text=true for exact text matching (no regex)
+- Optional include pattern to filter which files to search
+- Results limited to 100 files (newest first)
+- Respects .gitignore and .crushignore patterns
+- Uses ripgrep (rg) if available for performance
+
+---
+
+## Execution Tools
+
+### Bash Tool
+
+**Purpose**: Executes bash commands with automatic background conversion for long-running tasks. Cross-platform using mvdan/sh interpreter.
+
+**Location**: `/home/user/crush/internal/agent/tools/bash.tpl` (template)
+
+**Key Features**:
+- Cross-platform execution (works on Windows with Bash compatibility)
+- Auto-background for commands exceeding 1 minute
+- Banned commands list for security (configurable)
+- Detailed git commit procedure with attribution
+- Pull request creation with gh command
+- Output truncation if exceeds max length
+- Background execution with run_in_background parameter
+
+**Important Notes**:
+- Use Grep/Glob/Agent instead of 'find'/'grep'
+- Use View/LS instead of 'cat'/'head'/'tail'/'ls'
+- Chain commands with ';' or '&&'
+- Each command runs in independent shell
+- Prefer absolute paths over 'cd'
+
+---
+
+### MultiEdit Tool
+
+**Purpose**: Makes multiple edits to a single file in one operation. Built on Edit tool for efficient sequential find-and-replace.
+
+**Location**: `/home/user/crush/internal/agent/tools/multiedit.md`
+
+**Key Features**:
+- Multiple edits in single operation
+- Edits applied sequentially in order
+- Partial success: successful edits kept even if later ones fail
+- Each edit inherits all Edit tool rules (exact matching, whitespace)
+- Returns list of failed edits in response
+
+**Critical**: Earlier edits change file content that later edits must match. Plan sequence carefully.
+
+---
+
+### Job Output Tool
+
+**Purpose**: Retrieves current output from a background shell process.
+
+**Location**: `/home/user/crush/internal/agent/tools/job_output.md`
+
+**Key Features**:
+- View stdout/stderr from background processes
+- Check if process has completed
+- Can be called multiple times for incremental output
+
+---
+
+### Job Kill Tool
+
+**Purpose**: Terminates a background shell process.
+
+**Location**: `/home/user/crush/internal/agent/tools/job_kill.md`
+
+**Key Features**:
+- Stop long-running background processes immediately
+- Similar to SIGTERM signal
+- Shell ID becomes invalid after killing
+
+---
+
+## Network Tools
+
+### Fetch Tool
+
+**Purpose**: Fetches raw content from URL without AI processing. Fast and lightweight.
+
+**Location**: `/home/user/crush/internal/agent/tools/fetch.md`
+
+**Key Features**:
+- Raw, unprocessed content retrieval
+- Three output formats: text, markdown, html
+- Max response size: 5MB
+- Auto-handles HTTP redirects
+- No AI processing (saves tokens)
+
+**When to use**: Raw content, API responses, HTML/text without interpretation
+**When NOT to use**: Extract information, analyze, summarize (use agentic_fetch instead)
+
+---
+
+### Download Tool
+
+**Purpose**: Downloads binary data from URL and saves to local file.
+
+**Location**: `/home/user/crush/internal/agent/tools/download.md`
+
+**Key Features**:
+- Downloads any file type (binary or text)
+- Streaming for large files
+- Auto-creates parent directories
+- Max file size: 100MB
+- Will overwrite existing files without warning
+
+---
+
+### Web Fetch Tool
+
+**Purpose**: Fetches web content for sub-agents with automatic HTML to markdown conversion.
+
+**Location**: `/home/user/crush/internal/agent/tools/web_fetch.md`
+
+**Key Features**:
+- Converts HTML to markdown automatically
+- For large pages (>50KB), saves to temp file
+- Sub-agents can use grep/view on saved files
+- Max response size: 5MB
+
+---
+
+## LSP (Language Server Protocol) Tools
+
+### References Tool
+
+**Purpose**: Find all references/usage of a symbol by name using LSP.
+
+**Location**: `/home/user/crush/internal/agent/tools/references.md`
+
+**Key Features**:
+- Semantic-aware reference search (more accurate than grep)
+- Returns references grouped by file with line/column numbers
+- Supports multiple programming languages via LSP
+- Finds only real references (not comments or strings)
+- Use qualified names (pkg.Func, Class.method) for precision
+
+**Important**: Use this first for symbol searches, not grep/glob
+
+---
+
+### Diagnostics Tool
+
+**Purpose**: Get diagnostics (errors, warnings, hints) for file or entire project.
+
+**Location**: `/home/user/crush/internal/agent/tools/diagnostics.md`
+
+**Key Features**:
+- Displays errors, warnings, and hints
+- Groups diagnostics by severity
+- Can target specific file or entire project
+- Results from LSP clients
+
+---
+
+### Sourcegraph Tool
+
+**Purpose**: Search code across public repositories using Sourcegraph's GraphQL API.
+
+**Location**: `/home/user/crush/internal/agent/tools/sourcegraph.md`
+
+**Key Features**:
+- Search public repositories globally
+- Rich query syntax with filters
+- Max 20 results per query
+- Supports regex patterns, boolean operators
+- Multiple filters: repo, file, lang, type, time, etc.
+
+**Example Queries**:
+- `file:.go context.WithTimeout` - Go code using context.WithTimeout
+- `lang:typescript useState type:symbol` - TypeScript React hooks
+- `repo:^github\.com/kubernetes/kubernetes$ pod list` - Kubernetes repos
+
+---
+
+## Specialized Agent Tools
+
+### Agent Tool
+
+**Purpose**: Launches sub-agents for complex, multi-step tasks. Sub-agents have access to: GlobTool, GrepTool, LS, View tools.
+
+**Location**: `/home/user/crush/internal/agent/templates/agent_tool.md`
+
+**Usage**: Description for the Agent tool in main coder agent
+
+**Key Features**:
+- Launches stateless sub-agents
+- Sub-agents can search, read, analyze (no editing)
+- Must include complete task description (can't communicate back)
+- Can execute multiple agents concurrently
+- When to use vs direct tool calls
+
+**Important**: Sub-agents cannot use Bash, Replace, Edit tools
+
+---
+
+### Agentic Fetch Tool
+
+**Purpose**: Fetches and analyzes web content using AI processing. Alternative to raw fetch tool when analysis needed.
+
+**Description Location**: `/home/user/crush/internal/agent/templates/agentic_fetch.md`
+
+**Prompt Location**: `/home/user/crush/internal/agent/templates/agentic_fetch_prompt.md.tpl`
+
+**Key Features**:
+- AI-powered content analysis
+- When to use: extract information, answer questions, summarize, analyze
+- When NOT to use: raw content, direct API access
+- Uses task-style agent for processing
+
+**System Prompt**: Similar to task agent prompt, optimized for web content analysis
+
+---
+
+## Summary Statistics
+
+**Total Prompts Documented**: 27+
+
+### By Category:
+- **Main System Prompts**: 3 (coder, task, initialize)
+- **Session Management**: 2 (summary, title)
+- **File Operations**: 4 (view, edit, write, ls)
+- **Search Tools**: 2 (glob, grep)
+- **Execution Tools**: 4 (bash, multiedit, job_output, job_kill)
+- **Network Tools**: 3 (fetch, download, web_fetch)
+- **LSP Tools**: 3 (references, diagnostics, sourcegraph)
+- **Specialized Agent Tools**: 2 (agent, agentic_fetch)
+
+### Template Variables Available:
+All prompts can access context via Go templates:
+- `{{.WorkingDir}}` - Current working directory
+- `{{.IsGitRepo}}` - Git repository detection
+- `{{.Platform}}` - OS (windows/linux/darwin)
+- `{{.Date}}` - Current date
+- `{{.GitStatus}}` - Branch, status, recent commits
+- `{{.Config}}` - Full application configuration
+- `{{.ContextFiles}}` - Content from configured context paths
+- `{{.Provider}}` - AI provider name
+- `{{.Model}}` - Model identifier
+
+### Prompt Architecture:
+- All prompts embedded via Go's `embed` package
+- Compiled into binary at build time
+- Use Go `text/template` for variable substitution
+- Rendered at runtime with PromptDat context struct
