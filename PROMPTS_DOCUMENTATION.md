@@ -495,3 +495,113 @@ Analyze this codebase and create/update **{{.Config.Options.InitializeAs}}** to 
 
 ---
 
+## Session Management Prompts
+
+These prompts are used to manage conversation state and metadata.
+
+### Summary Prompt
+
+**Purpose**: Generates comprehensive summaries of conversations to preserve context when resuming work later. This is critical for maintaining continuity across sessions.
+
+**Location**: `/home/user/crush/internal/agent/templates/summary.md`
+
+**Usage**: Called in `agent.go:545` in the `Summarize()` method when a session needs to be summarized
+
+**Key Features**:
+- Creates the ONLY context available when conversation resumes
+- Comprehensive documentation (no length limit - err on side of detail)
+- Required sections: Current State, Files & Changes, Technical Context, Strategy & Approach, Exact Next Steps
+- Focuses on "why" rather than "what"
+- Written as if briefing a teammate taking over mid-task
+- Includes file paths with line numbers
+- Documents both successful and failed commands
+- Lists specific next steps (not vague descriptions)
+
+**Prompt Template**:
+
+```markdown
+You are summarizing a conversation to preserve context for continuing work later.
+
+**Critical**: This summary will be the ONLY context available when the conversation resumes. Assume all previous messages will be lost. Be thorough.
+
+**Required sections**:
+
+## Current State
+
+- What task is being worked on (exact user request)
+- Current progress and what's been completed
+- What's being worked on right now (incomplete work)
+- What remains to be done (specific next steps, not vague)
+
+## Files & Changes
+
+- Files that were modified (with brief description of changes)
+- Files that were read/analyzed (why they're relevant)
+- Key files not yet touched but will need changes
+- File paths and line numbers for important code locations
+
+## Technical Context
+
+- Architecture decisions made and why
+- Patterns being followed (with examples)
+- Libraries/frameworks being used
+- Commands that worked (exact commands with context)
+- Commands that failed (what was tried and why it didn't work)
+- Environment details (language versions, dependencies, etc.)
+
+## Strategy & Approach
+
+- Overall approach being taken
+- Why this approach was chosen over alternatives
+- Key insights or gotchas discovered
+- Assumptions made
+- Any blockers or risks identified
+
+## Exact Next Steps
+
+Be specific. Don't write "implement authentication" - write:
+
+1. Add JWT middleware to src/middleware/auth.js:15
+2. Update login handler in src/routes/user.js:45 to return token
+3. Test with: npm test -- auth.test.js
+
+**Tone**: Write as if briefing a teammate taking over mid-task. Include everything they'd need to continue without asking questions.
+
+**Length**: No limit. Err on the side of too much detail rather than too little. Critical context is worth the tokens.
+```
+
+---
+
+### Title Generation Prompt
+
+**Purpose**: Generates concise titles for conversations based on the user's initial message. Used for displaying conversations in UI/history.
+
+**Location**: `/home/user/crush/internal/agent/templates/title.md`
+
+**Usage**: Called in `agent.go:716` in the `generateTitle()` method when a new conversation starts
+
+**Key Features**:
+- Maximum 50 characters
+- Single line only
+- No quotes or colons
+- Summarizes user's first message
+- Entire response becomes the title
+- Uses `/no_think` flag for fast generation
+
+**Prompt Template**:
+
+```markdown
+you will generate a short title based on the first message a user begins a conversation with
+
+<rules>
+- ensure it is not more than 50 characters long
+- the title should be a summary of the user's message
+- it should be one line long
+- do not use quotes or colons
+- the entire text you return will be used as the title
+- never return anything that is more than one sentence (one line) long
+</rules>
+```
+
+---
+
